@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp 3.1.1 — React Login Panel</title>
+<link rel="stylesheet" href="../lab.css">
+
+<style>
+  .auth-card{
+    max-width:460px;
+    margin:0 auto;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:34px;
+  }
+
+  .icon-top{
+    text-align:center;
+    font-size:2.3rem;
+    margin-bottom:10px;
+  }
+
+  .main-title{
+    text-align:center;
+    color:#f1f5f9;
+    font-size:1.35rem;
+    font-weight:700;
+  }
+
+  .sub-title{
+    text-align:center;
+    color:#94a3b8;
+    font-size:.84rem;
+    margin:6px 0 24px;
+  }
+
+  .demo-box{
+    background:rgba(59,130,246,.08);
+    border:1px dashed rgba(59,130,246,.25);
+    border-radius:10px;
+    padding:12px;
+    font-size:.78rem;
+    color:#cbd5e1;
+    margin-bottom:22px;
+  }
+
+  .input-wrap{ margin-bottom:18px; }
+
+  .input-label{
+    display:block;
+    color:#94a3b8;
+    font-size:.78rem;
+    margin-bottom:6px;
+    font-weight:600;
+  }
+
+  .input-box{
+    width:100%;
+    padding:12px 14px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.04);
+    color:#fff;
+    font-size:.92rem;
+    box-sizing:border-box;
+    outline:none;
+  }
+
+  .input-box:focus{
+    border-color:#6366f1;
+  }
+
+  .input-box.error{
+    border-color:#ef4444;
+  }
+
+  .err-msg{
+    color:#f87171;
+    font-size:.74rem;
+    margin-top:5px;
+  }
+
+  .rule{
+    font-size:.77rem;
+    padding:3px 0;
+    color:#64748b;
+  }
+
+  .ok{ color:#22c55e; }
+
+  .login-btn{
+    width:100%;
+    padding:13px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    color:#fff;
+    font-weight:700;
+    background:linear-gradient(135deg,#4f46e5,#7c3aed);
+    margin-top:8px;
+  }
+
+  .login-btn:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+  }
+
+  .status{
+    text-align:center;
+    margin-top:16px;
+    min-height:20px;
+    font-size:.82rem;
+  }
+
+  .good{ color:#22c55e; }
+  .bad{ color:#ef4444; }
+
+  .user-panel{
+    display:none;
+    background:rgba(34,197,94,.08);
+    border:1px solid rgba(34,197,94,.2);
+    padding:18px;
+    border-radius:14px;
+    text-align:center;
+  }
+
+  .logout{
+    margin-top:12px;
+    padding:8px 18px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:rgba(239,68,68,.12);
+    color:#f87171;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="lab-container">
+  <a href="../index.html" class="back-btn">← Back to Hub</a>
+
+  <div class="lab-header">
+    <div class="exp-badge">Exp 3.1.1</div>
+    <h1>Login Form — React State</h1>
+    <p>Hooks · Validation · Authentication Demo</p>
+  </div>
+
+  <!-- Session -->
+  <div class="user-panel" id="userPanel">
+    <h3 id="userName"></h3>
+    <p id="userInfo"></p>
+    <button class="logout" onclick="logoutUser()">Logout</button>
+  </div>
+
+  <!-- Form -->
+  <div class="auth-card" id="authCard">
+
+    <div class="icon-top">🛡️</div>
+    <div class="main-title">Secure Login</div>
+    <div class="sub-title">Enter credentials to continue</div>
+
+    <div class="demo-box">
+      Demo Login: <b>admin@test.com</b> / <b>Password1</b>
+    </div>
+
+    <div class="input-wrap">
+      <label class="input-label">Email</label>
+      <input type="email" id="email" class="input-box" placeholder="name@example.com" oninput="checkForm()">
+      <div class="err-msg" id="emailErr"></div>
+    </div>
+
+    <div class="input-wrap">
+      <label class="input-label">Password</label>
+      <input type="password" id="pass" class="input-box" placeholder="********" oninput="checkForm()" onkeydown="if(event.key==='Enter')loginUser()">
+      <div class="err-msg" id="passErr"></div>
+
+      <div class="rule" id="r1">○ Minimum 8 characters</div>
+      <div class="rule" id="r2">○ Contains number</div>
+      <div class="rule" id="r3">○ Contains uppercase</div>
+    </div>
+
+    <button class="login-btn" id="btn" onclick="loginUser()" disabled>Login</button>
+    <div class="status" id="status"></div>
+
+  </div>
+</div>
+
+<script>
+const USERS = [
+ {email:"admin@test.com", pass:"Password1", name:"Admin User", role:"Administrator"},
+ {email:"user@test.com", pass:"User1234", name:"Regular User", role:"Member"}
+];
+
+function mark(id, valid, text){
+  const el = document.getElementById(id);
+  el.className = "rule " + (valid ? "ok" : "");
+  el.textContent = (valid ? "✓ " : "○ ") + text;
+}
+
+function checkForm(){
+  let email = document.getElementById("email").value.trim();
+  let pass = document.getElementById("pass").value;
+
+  let valid = true;
+
+  if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    document.getElementById("emailErr").textContent = "Invalid email";
+    valid = false;
+  }else{
+    document.getElementById("emailErr").textContent = "";
+  }
+
+  let a = pass.length >= 8;
+  let b = /\d/.test(pass);
+  let c = /[A-Z]/.test(pass);
+
+  mark("r1",a,"Minimum 8 characters");
+  mark("r2",b,"Contains number");
+  mark("r3",c,"Contains uppercase");
+
+  if(!email || !a || !b || !c) valid = false;
+
+  document.getElementById("btn").disabled = !valid;
+}
+
+function loginUser(){
+  checkForm();
+  if(document.getElementById("btn").disabled) return;
+
+  let email = document.getElementById("email").value.trim();
+  let pass = document.getElementById("pass").value;
+
+  const btn = document.getElementById("btn");
+  btn.disabled = true;
+  btn.textContent = "Checking...";
+
+  setTimeout(()=>{
+    let user = USERS.find(x=>x.email===email && x.pass===pass);
+
+    if(user){
+      document.getElementById("status").className="status good";
+      document.getElementById("status").textContent="Login Successful";
+      setTimeout(()=>showUser(user),500);
+    }else{
+      document.getElementById("status").className="status bad";
+      document.getElementById("status").textContent="Wrong credentials";
+      btn.disabled = false;
+      btn.textContent = "Login";
+    }
+  },700);
+}
+
+function showUser(user){
+  document.getElementById("authCard").style.display="none";
+  document.getElementById("userPanel").style.display="block";
+
+  document.getElementById("userName").textContent="👤 " + user.name;
+  document.getElementById("userInfo").textContent=
+    user.role + " • Logged in at " + new Date().toLocaleTimeString();
+}
+
+function logoutUser(){
+  document.getElementById("userPanel").style.display="none";
+  document.getElementById("authCard").style.display="block";
+
+  document.getElementById("email").value="";
+  document.getElementById("pass").value="";
+  document.getElementById("status").textContent="";
+  document.getElementById("btn").textContent="Login";
+  document.getElementById("btn").disabled=true;
+
+  checkForm();
+}
+</script>
+
+</body>
+</html>
