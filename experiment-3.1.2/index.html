@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp 3.1.2 — Secure Route Access</title>
+<link rel="stylesheet" href="../lab.css">
+
+<style>
+  .sim-box{
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:16px;
+    overflow:hidden;
+  }
+
+  .top-nav{
+    background:rgba(15,23,42,.92);
+    padding:14px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+
+  .brand{
+    color:#818cf8;
+    font-weight:700;
+    font-size:.92rem;
+  }
+
+  .menu{
+    display:flex;
+    gap:10px;
+  }
+
+  .menu span{
+    padding:5px 10px;
+    border-radius:7px;
+    cursor:pointer;
+    color:#94a3b8;
+    font-size:.8rem;
+  }
+
+  .menu span:hover{
+    background:rgba(255,255,255,.05);
+    color:#fff;
+  }
+
+  .screen{
+    min-height:300px;
+    padding:28px;
+    background:rgba(0,0,0,.18);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+  }
+
+  .mini-login{
+    max-width:340px;
+    margin:auto;
+    text-align:center;
+  }
+
+  .mini-login input{
+    width:100%;
+    margin-bottom:10px;
+  }
+
+  .access-box{
+    text-align:center;
+  }
+
+  .access-icon{
+    font-size:2.7rem;
+    margin-bottom:10px;
+  }
+
+  .access-title{
+    color:#e2e8f0;
+    font-weight:700;
+  }
+
+  .access-sub{
+    color:#64748b;
+    font-size:.82rem;
+    margin-top:5px;
+  }
+
+  .info-card{
+    background:rgba(34,197,94,.08);
+    border:1px solid rgba(34,197,94,.2);
+    border-radius:14px;
+    padding:24px;
+    text-align:center;
+  }
+
+  .logs{
+    background:#090909;
+    border-radius:10px;
+    padding:12px;
+    font-family:monospace;
+    font-size:.75rem;
+    max-height:140px;
+    overflow:auto;
+  }
+
+  .line{margin:4px 0;}
+  .blue{color:#38bdf8;}
+  .green{color:#22c55e;}
+  .yellow{color:#facc15;}
+  .red{color:#f87171;}
+</style>
+</head>
+
+<body>
+<div class="lab-container">
+
+<a href="../index.html" class="back-btn">← Back to Hub</a>
+
+<div class="lab-header">
+  <div class="exp-badge">Exp 3.1.2</div>
+  <h1>JWT Protected Routes</h1>
+  <p>Router Guards · Login Session · Access Control</p>
+</div>
+
+<!-- Simulator -->
+<div class="lab-card">
+<h2 class="card-title">🖥 Route Simulator</h2>
+
+<div class="sim-box">
+
+<div class="top-nav">
+  <div class="brand">🔐 RouteGuard</div>
+
+  <div class="menu">
+    <span onclick="goPage('home')">Home</span>
+    <span onclick="goPage('dash')">Dashboard</span>
+    <span onclick="goPage('profile')">Profile</span>
+    <span onclick="goPage('admin')">Admin</span>
+  </div>
+
+  <div id="loginArea">
+    <button class="lab-btn" onclick="openLogin()">Login</button>
+  </div>
+</div>
+
+<div class="screen" id="screen"></div>
+
+</div>
+</div>
+
+<!-- Login -->
+<div class="lab-card" id="loginBox" style="display:none;">
+<h2 class="card-title">🔑 Sign In</h2>
+
+<div class="mini-login">
+<p style="font-size:.8rem;color:#94a3b8;">
+Use: <b>admin / admin123</b> or <b>user / user123</b>
+</p>
+
+<input class="lab-input" id="u" placeholder="Username" value="admin">
+<input class="lab-input" id="p" type="password" placeholder="Password" value="admin123">
+
+<div style="display:flex;gap:8px;justify-content:center;">
+<button class="lab-btn" onclick="login()">Login</button>
+<button class="lab-btn" onclick="closeLogin()" style="background:rgba(255,255,255,.05);color:#94a3b8;">Cancel</button>
+</div>
+
+<div id="err" style="color:#f87171;font-size:.8rem;margin-top:8px;"></div>
+</div>
+</div>
+
+<!-- Logs -->
+<div class="lab-card">
+<h2 class="card-title">📡 Request Logs</h2>
+<div class="logs" id="logs">
+<div class="line blue">System ready — token interceptor active</div>
+</div>
+</div>
+
+</div>
+
+<script>
+const USERS = {
+ admin:{pass:"admin123", role:"admin", name:"Admin User"},
+ user:{pass:"user123", role:"user", name:"John Doe"}
+};
+
+let current = null;
+let token = null;
+
+function log(type,msg){
+ const box = document.getElementById("logs");
+ const d = document.createElement("div");
+ d.className = "line " + type;
+ d.textContent = "[" + new Date().toLocaleTimeString() + "] " + msg;
+ box.appendChild(d);
+ box.scrollTop = box.scrollHeight;
+}
+
+function openLogin(){
+ document.getElementById("loginBox").style.display="block";
+}
+
+function closeLogin(){
+ document.getElementById("loginBox").style.display="none";
+}
+
+function login(){
+ let u = document.getElementById("u").value.trim();
+ let p = document.getElementById("p").value.trim();
+
+ if(!USERS[u] || USERS[u].pass !== p){
+   document.getElementById("err").textContent="Invalid credentials";
+   log("yellow","POST /login → Unauthorized");
+   return;
+ }
+
+ current = {...USERS[u], username:u};
+ token = "jwt_" + Date.now();
+
+ log("green","POST /login → Success token created");
+ closeLogin();
+
+ document.getElementById("loginArea").innerHTML =
+ `<span style="font-size:.8rem;color:#94a3b8;">${u}</span>
+  <button class='lab-btn' onclick='logout()'>Logout</button>`;
+
+ goPage("dash");
+}
+
+function logout(){
+ current = null;
+ token = null;
+
+ log("blue","Session ended");
+ document.getElementById("loginArea").innerHTML =
+ `<button class="lab-btn" onclick="openLogin()">Login</button>`;
+
+ goPage("home");
+}
+
+function denied(page){
+ document.getElementById("screen").innerHTML =
+ `<div class="access-box">
+   <div class="access-icon">🔒</div>
+   <div class="access-title">Protected Route</div>
+   <div class="access-sub">/${page} requires login</div>
+   <br>
+   <button class="lab-btn" onclick="openLogin()">Login</button>
+ </div>`;
+}
+
+function forbidden(){
+ document.getElementById("screen").innerHTML =
+ `<div class="access-box">
+   <div class="access-icon">🚫</div>
+   <div class="access-title">403 Forbidden</div>
+   <div class="access-sub">Admin access required</div>
+ </div>`;
+}
+
+function goPage(page){
+
+ if(page==="home"){
+   document.getElementById("screen").innerHTML =
+   `<div class="access-box">
+      <div class="access-icon">🏠</div>
+      <div class="access-title">Home Page</div>
+      <div class="access-sub">Public route for all visitors</div>
+    </div>`;
+   return;
+ }
+
+ log("blue","GET /"+page+" token check");
+
+ if(!token){
+   log("yellow","No token found");
+   denied(page);
+   return;
+ }
+
+ if(page==="admin" && current.role!=="admin"){
+   log("red","Role denied");
+   forbidden();
+   return;
+ }
+
+ log("green","Access granted");
+
+ const pages = {
+   dash:`<div class="info-card"><h3>📊 Dashboard</h3><p>Welcome ${current.name}</p></div>`,
+   profile:`<div class="info-card"><h3>👤 Profile</h3><p>User: ${current.username}</p><p>Role: ${current.role}</p></div>`,
+   admin:`<div class="info-card"><h3>⚙ Admin Panel</h3><p>Manage users & settings</p></div>`
+ };
+
+ document.getElementById("screen").innerHTML = pages[page];
+}
+
+goPage("home");
+</script>
+
+</body>
+</html>
