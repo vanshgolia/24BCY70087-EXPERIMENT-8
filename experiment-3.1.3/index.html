@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exp 3.1.3 — Access Role Manager</title>
+<link rel="stylesheet" href="../lab.css">
+
+<style>
+  .tabs{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+
+  .tab{
+    padding:8px 18px;
+    border-radius:22px;
+    cursor:pointer;
+    font-size:.84rem;
+    font-weight:700;
+    transition:.2s;
+    border:1px solid transparent;
+  }
+
+  .tab.admin{background:rgba(239,68,68,.12);color:#f87171;}
+  .tab.manager{background:rgba(250,204,21,.12);color:#facc15;}
+  .tab.user{background:rgba(34,197,94,.12);color:#22c55e;}
+
+  .tab.active{
+    transform:scale(1.04);
+    box-shadow:0 0 10px rgba(255,255,255,.08);
+  }
+
+  .badge{
+    display:inline-block;
+    padding:7px 14px;
+    border-radius:20px;
+    font-size:.82rem;
+    font-weight:700;
+    margin-bottom:14px;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:12px;
+  }
+
+  .card{
+    border-radius:12px;
+    padding:14px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.03);
+  }
+
+  .yes{
+    border-color:rgba(34,197,94,.25);
+    background:rgba(34,197,94,.05);
+  }
+
+  .no{
+    opacity:.45;
+  }
+
+  .icon{
+    font-size:1.4rem;
+    margin-bottom:8px;
+  }
+
+  .name{
+    color:#e2e8f0;
+    font-size:.84rem;
+    font-weight:700;
+  }
+
+  .status{
+    margin-top:5px;
+    font-size:.74rem;
+    font-weight:700;
+  }
+
+  .yes .status{color:#22c55e;}
+  .no .status{color:#ef4444;}
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:.82rem;
+  }
+
+  th,td{
+    padding:10px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    text-align:center;
+  }
+
+  th:first-child, td:first-child{
+    text-align:left;
+  }
+
+  tr:hover td{
+    background:rgba(255,255,255,.02);
+  }
+</style>
+</head>
+
+<body>
+<div class="lab-container">
+
+<a href="../index.html" class="back-btn">← Back to Hub</a>
+
+<div class="lab-header">
+  <div class="exp-badge">Exp 3.1.3</div>
+  <h1>Role-Based Access Control</h1>
+  <p>User Roles · Permission Matrix · Dynamic Interface</p>
+</div>
+
+<!-- Role Switch -->
+<div class="lab-card">
+<h2 class="card-title">👤 Choose Role</h2>
+
+<div class="tabs">
+  <div class="tab admin active" id="adminTab" onclick="changeRole('admin')">🔴 Admin</div>
+  <div class="tab manager" id="managerTab" onclick="changeRole('manager')">🟡 Manager</div>
+  <div class="tab user" id="userTab" onclick="changeRole('user')">🟢 User</div>
+</div>
+
+<div id="desc" style="font-size:.82rem;color:#94a3b8;"></div>
+</div>
+
+<!-- Permission View -->
+<div class="lab-card">
+<h2 class="card-title">🖥 Permissions</h2>
+<div id="badgeArea"></div>
+<div class="grid" id="cards"></div>
+</div>
+
+<!-- Matrix -->
+<div class="lab-card">
+<h2 class="card-title">📋 Access Matrix</h2>
+
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Admin</th>
+<th>Manager</th>
+<th>User</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+
+</div>
+
+</div>
+
+<script>
+const DATA = {
+ admin:{
+   title:"Administrator",
+   color:"#f87171",
+   bg:"rgba(239,68,68,.12)",
+   desc:"Full access to all system modules and controls.",
+   allow:["Dashboard","Users","Content","Reports","Delete","Settings","API","Logs"]
+ },
+ manager:{
+   title:"Manager",
+   color:"#facc15",
+   bg:"rgba(250,204,21,.12)",
+   desc:"Can monitor reports and manage content.",
+   allow:["Dashboard","Content","Reports","API"]
+ },
+ user:{
+   title:"Standard User",
+   color:"#22c55e",
+   bg:"rgba(34,197,94,.12)",
+   desc:"Limited access to dashboard only.",
+   allow:["Dashboard"]
+ }
+};
+
+const ITEMS = [
+["Dashboard","📊"],
+["Users","👥"],
+["Content","✏️"],
+["Reports","📈"],
+["Delete","🗑️"],
+["Settings","⚙️"],
+["API","🔌"],
+["Logs","📋"]
+];
+
+let current = "admin";
+
+function changeRole(role){
+ current = role;
+
+ document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+ document.getElementById(role+"Tab").classList.add("active");
+
+ drawCards();
+ drawTable();
+}
+
+function drawCards(){
+ let r = DATA[current];
+
+ document.getElementById("desc").textContent = r.desc;
+
+ document.getElementById("badgeArea").innerHTML =
+ `<div class="badge" style="background:${r.bg};color:${r.color};border:1px solid ${r.color}40;">
+ Active Role: ${r.title}
+ </div>`;
+
+ let html = "";
+
+ ITEMS.forEach(i=>{
+   let ok = r.allow.includes(i[0]);
+
+   html += `
+   <div class="card ${ok ? 'yes':'no'}">
+      <div class="icon">${i[1]}</div>
+      <div class="name">${i[0]}</div>
+      <div class="status">${ok ? '✅ Allowed':'🚫 Denied'}</div>
+   </div>`;
+ });
+
+ document.getElementById("cards").innerHTML = html;
+}
+
+function drawTable(){
+ let body = "";
+
+ ITEMS.forEach(i=>{
+   body += `
+   <tr>
+    <td>${i[0]}</td>
+    <td>${DATA.admin.allow.includes(i[0]) ? '✅':'❌'}</td>
+    <td>${DATA.manager.allow.includes(i[0]) ? '✅':'❌'}</td>
+    <td>${DATA.user.allow.includes(i[0]) ? '✅':'❌'}</td>
+   </tr>`;
+ });
+
+ document.getElementById("tbody").innerHTML = body;
+}
+
+changeRole("admin");
+</script>
+
+</body>
+</html>
